@@ -10,18 +10,28 @@ from collections import deque
 
 from src.state import State, is_goal
 from src.moves import DIRECTIONS, apply_move
+from src.stats import SearchLimitReached, SearchStats
 
 
 def solve(
     initial_state: State,
     grid: list[str],
     targets: set[tuple[int, int]],
+    stats: SearchStats | None = None,
+    limit: int | None = None,
 ) -> list[str] | None:
     """Find the shortest solution using BFS.
 
     Returns a list of move characters (e.g. ['L', 'L']) on success,
     or None if no solution exists.
+
+    `stats`, when given, is filled in as the search runs.  With a `limit`,
+    SearchLimitReached is raised once that many states have been expanded
+    without an answer.
     """
+    if stats is None:
+        stats = SearchStats()
+
     # Fast exit: the initial state is already solved (e.g. all boxes on targets).
     if is_goal(initial_state, targets):
         return []
@@ -38,9 +48,14 @@ def solve(
     parent: dict[State, tuple[State, str]] = {}
 
     queue: deque[State] = deque([initial_state])
+    stats.seen = 1
 
     while queue:
+        if limit is not None and stats.expanded >= limit:
+            raise SearchLimitReached
+
         current = queue.popleft()
+        stats.expanded += 1
 
         for move in DIRECTIONS:
             next_state = apply_move(current, move, grid, targets)
@@ -52,6 +67,7 @@ def solve(
                 continue  # Already seen this state — skip.
 
             visited.add(next_state)
+            stats.seen += 1
             parent[next_state] = (current, move)
 
             if is_goal(next_state, targets):

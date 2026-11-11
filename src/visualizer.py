@@ -136,7 +136,12 @@ def run_visualizer(
     index  = [0]              # Mutable int wrapped in a list for closure access.
 
     # ── Window setup ─────────────────────────────────────────────────────────
-    root = tk.Tk()
+    try:
+        root = tk.Tk()
+    except tk.TclError as error:
+        # No screen to open a window on (a server, a container, an SSH session).
+        print(f"Visualizer unavailable: {error}")
+        return
     root.title("Sokoban Solver — Step-through Visualizer")
     root.configure(bg=BG)
     root.resizable(False, False)
